@@ -1,7 +1,6 @@
 package com.example.currencyconverter.retrofit
 
 import com.google.gson.GsonBuilder
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -10,7 +9,7 @@ import java.util.concurrent.TimeUnit
 
 class RetrofitInstance {
     companion object {
-        val BASE_URL: String = "https://www.tayqatech.com"
+        val baseUrl: String = "https://www.tayqatech.com"
         val interceptor = HttpLoggingInterceptor().apply {
             this.level = HttpLoggingInterceptor.Level.BODY
         }
@@ -25,7 +24,7 @@ class RetrofitInstance {
         }.build()
         fun getRetrofitInstance(): Retrofit {
             return Retrofit.Builder()
-                .baseUrl(BASE_URL)
+                .baseUrl(baseUrl)
                 .client(client)
                 .addConverterFactory(GsonConverterFactory.create(GsonBuilder().create()))
                 .build()

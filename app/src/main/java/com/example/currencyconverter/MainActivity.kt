@@ -1,7 +1,7 @@
 package com.example.currencyconverter
 
 import android.content.IntentFilter
-import android.net.ConnectivityManager
+import android.net.ConnectivityManager.CONNECTIVITY_ACTION
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -19,7 +19,6 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
-
 class MainActivity : AppCompatActivity(),
     Receiver {
 
@@ -31,19 +30,29 @@ class MainActivity : AppCompatActivity(),
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Network dəyişikliyini dinləmək üçün Broadcast Receiver
-        val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
-        networkChange = NetworkChangeReceiver()
-        this.registerReceiver(networkChange, filter)
-        rateRepository = RateRepository(applicationContext)
-        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
-        adapter = MyAdapter(recyclerView)
-        recyclerView.adapter = adapter
+        settingBroadcastReceiver()
+        settingUpRecyclerAdapter()
+        sendingRequestEveryXSecond(x = 1)
+        observingLivedata()
+    }
 
-        val repeatEveryXSecond = Observable.interval(2, TimeUnit.SECONDS)
+    private fun observingLivedata() {
+        rateRepository.rates.observe(this, {
+            if (adapter.items.isEmpty()) {
+                adapter.updateItems(it.toMutableList())
+                adapter.notifyDataSetChanged()
+            }
+
+            it.forEach {
+                adapter.viewHolderMap[it.code]?.bind(it)
+            }
+        })
+    }
+
+    private fun sendingRequestEveryXSecond(x: Long) {
+        val repeatEveryXSecond = Observable.interval(x, TimeUnit.SECONDS)
             .observeOn(AndroidSchedulers.mainThread())
             .subscribeOn(Schedulers.io())
-
         repeatEveryXSecond.subscribe({
             if (isOnline) rateRepository.getRatesFromServer()?.observe(this, Observer {
                 val rates = it.body() ?: ArrayList<RateItem>()
@@ -55,11 +64,20 @@ class MainActivity : AppCompatActivity(),
         }, {
             Log.e("myError", it.message.toString())
         })
+    }
 
-        rateRepository.rates.observe(this, {
-            adapter.setListAndNotify(it)
-        })
+    private fun settingUpRecyclerAdapter() {
+        rateRepository = RateRepository(applicationContext)
+        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+        adapter = MyAdapter(recyclerView)
+        recyclerView.adapter = adapter
+    }
 
+    fun settingBroadcastReceiver() {
+        // Network dəyişikliyini dinləmək üçün Broadcast Receiver
+        val filter = IntentFilter(CONNECTIVITY_ACTION)
+        networkChange = NetworkChangeReceiver()
+        this.registerReceiver(networkChange, filter)
     }
 
     override fun onDestroy() {

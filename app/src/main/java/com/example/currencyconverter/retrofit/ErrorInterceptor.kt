@@ -4,6 +4,7 @@ import okhttp3.Interceptor
 import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody
+import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.internal.http2.ConnectionShutdownException
 import java.io.IOException
 import java.net.SocketTimeoutException
@@ -20,11 +21,11 @@ class ErrorInterceptor : Interceptor {
             val bodyString = response.body!!.string()
 
             return response.newBuilder()
-                .body(ResponseBody.create(response.body?.contentType(), bodyString))
+                .body(bodyString.toResponseBody(response.body?.contentType()))
                 .build()
         } catch (e: Exception) {
             e.printStackTrace()
-            var msg = ""
+            var msg: String
             when (e) {
                 is SocketTimeoutException -> {
                     msg = "Timeout - Please check your internet connection"
@@ -51,7 +52,7 @@ class ErrorInterceptor : Interceptor {
                 .protocol(Protocol.HTTP_1_1)
                 .code(999)
                 .message(msg)
-                .body(ResponseBody.create(null, "{${e}}")).build()
+                .body("{${e}}".toResponseBody(null)).build()
         }
     }
 }
